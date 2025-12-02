@@ -1,65 +1,80 @@
-name: Build and Deploy to AKS
+name: Build and Deploy Frontend to AKS
 
 on:
   push:
-    branches:
-      - main  # Trigger on push to main branch
+    branches: [ "main" ]
+  workflow_dispatch:
 
 env:
-  APP_NAME: angular-app
+  # ---------------------------------------------------------
+  # CONFIGURATION (Matches your Backend)
+  # ---------------------------------------------------------
+  AZURE_CONTAINER_REGISTRY: "myregistry123pg"
+  CLUSTER_NAME: "my-aks-cluster"
+  RESOURCE_GROUP: "my-app-rg"
+  NAMESPACE: "default"
+
+  # NEW: Unique name for the frontend image
+  IMAGE_NAME: "testapp-frontend"
 
 jobs:
-  build_and_deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Checkout Code
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
 
-      # 2. Log in to Azure Container Registry
-      - name: Login to ACR
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+      # Required for ARM64 builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      # 3. Build and Push Docker Image
-      - name: Build and Push Docker Image
-        run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.APP_NAME }}:${{ github.sha }} .
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.APP_NAME }}:${{ github.sha }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # 4. Log in to Azure (for AKS access)
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 5. Set AKS Context
+      - name: Login to ACR
+        run: az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
+
+      # Build for ARM64
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/arm64
+          tags: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+
+  deploy-to-aks:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Set AKS Context
         uses: azure/aks-set-context@v3
         with:
-          resource-group: ${{ secrets.RESOURCE_GROUP }}
-          cluster-name: ${{ secrets.CLUSTER_NAME }}
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          cluster-name: ${{ env.CLUSTER_NAME }}
 
-      # 6. Create Image Pull Secret (Optional if ACR is attached to AKS)
-      # This ensures AKS has permission to pull the image from your private registry
-      - name: Create Image Pull Secret
+      - name: Deploy to Kubernetes
         run: |
-          kubectl create secret docker-registry acr-secret \
-            --docker-server=${{ secrets.ACR_LOGIN_SERVER }} \
-            --docker-username=${{ secrets.ACR_USERNAME }} \
-            --docker-password=${{ secrets.ACR_PASSWORD }} \
-            --dry-run=client -o yaml | kubectl apply -f -
+          # 1. Apply the configuration (Deployment & Service)
+          kubectl apply -f k8s/deployment-frontend.yaml --namespace ${{ env.NAMESPACE }}
 
-      # 7. Deploy to Kubernetes
-      - name: Deploy to AKS
-        run: |
-          # Replace the placeholder image name in the manifest with the actual image:tag
-          sed -i "s|REPLACE_WITH_ACR_IMAGE_NAME|${{ secrets.ACR_LOGIN_SERVER }}/${{ env.APP_NAME }}:${{ github.sha }}|g" k8s/deployment.yaml
+          # 2. Force update the image
+          kubectl set image deployment/testapp-frontend testapp-frontend=${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} --namespace ${{ env.NAMESPACE }}
 
-          # Apply the manifests
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
+          # 3. Verify it worked
+          kubectl rollout status deployment/testapp-frontend --namespace ${{ env.NAMESPACE }}

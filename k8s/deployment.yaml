@@ -1,27 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: angular-app-deployment
+  name: testapp-frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: angular-app
+      app: testapp-frontend
   template:
     metadata:
       labels:
-        app: angular-app
+        app: testapp-frontend
     spec:
       containers:
-        - name: angular-app
-          # This placeholder will be replaced by the GitHub Action
-          image: REPLACE_WITH_ACR_IMAGE_NAME
+        - name: testapp-frontend
+          # GitHub Actions will replace this image URL
+          image: REPLACE_ME
           ports:
             - containerPort: 80
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "250m"
-              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: testapp-frontend-service
+spec:
+  # This provides the Public IP (LoadBalancer)
+  type: LoadBalancer
+  selector:
+    app: testapp-frontend
+  ports:
+    - port: 80
+      targetPort: 80
