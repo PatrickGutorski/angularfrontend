@@ -9,5 +9,67 @@
 </head>
 <body>
   <app-root></app-root>
+
+  <!-- Greeting button and result (added) -->
+  <div id="greeting-widget" style="position:fixed; right:16px; bottom:16px; background:rgba(255,255,255,0.95); padding:12px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; z-index:9999;">
+    <button id="greetBtn" style="padding:8px 12px; border-radius:6px; border:1px solid #0b63ff; background:linear-gradient(#0b63ff,#0047d1); color:#fff; cursor:pointer;">Fetch Greeting</button>
+    <div id="greetResult" style="margin-top:8px; max-width:320px; word-break:break-word; font-size:0.9rem; color:#111"></div>
+  </div>
+
+  <script>
+    // Sends GET to the provided API and displays the result inside #greetResult
+    (function () {
+      const url = 'http://57.153.167.65/api/greeting';
+      const btn = document.getElementById('greetBtn');
+      const out = document.getElementById('greetResult');
+
+      function setLoading(loading) {
+        if (!btn) return;
+        btn.disabled = loading;
+        btn.textContent = loading ? 'Fetching…' : 'Fetch Greeting';
+        btn.style.opacity = loading ? '0.7' : '1';
+      }
+
+      async function fetchGreeting() {
+        if (!out) return;
+        setLoading(true);
+        out.textContent = '';
+        try {
+          const resp = await fetch(url, { method: 'GET', cache: 'no-store' });
+
+          // Check response
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+          }
+
+          // Try to parse JSON, otherwise show text
+          const contentType = resp.headers.get('content-type') || '';
+          let data;
+          if (contentType.includes('application/json')) {
+            data = await resp.json();
+            // display a sensible property if available
+            if (data && (data.greeting || data.message || data.data)) {
+              out.textContent = data.greeting || data.message || JSON.stringify(data.data);
+            } else {
+              out.textContent = JSON.stringify(data);
+            }
+          } else {
+            data = await resp.text();
+            out.textContent = data;
+          }
+        } catch (err) {
+          // Show user-friendly message
+          out.textContent = 'Request failed: ' + (err && err.message ? err.message : String(err));
+          console.error('Greeting fetch error:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      if (btn) {
+        btn.addEventListener('click', fetchGreeting);
+      }
+    })();
+  </script>
 </body>
 </html>
