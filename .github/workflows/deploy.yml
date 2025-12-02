@@ -71,7 +71,7 @@ jobs:
       - name: Deploy to Kubernetes
         run: |
           # 1. Apply the configuration (Deployment & Service)
-          kubectl apply -f k8s/deployment-frontend.yaml --namespace ${{ env.NAMESPACE }}
+          kubectl apply -f k8s/deployment.yaml --namespace ${{ env.NAMESPACE }}
 
           # 2. Force update the image
           kubectl set image deployment/testapp-frontend testapp-frontend=${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} --namespace ${{ env.NAMESPACE }}
