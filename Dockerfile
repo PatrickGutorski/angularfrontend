@@ -1,28 +1,38 @@
-# STAGE 1: Build the Angular app
-FROM node:18-alpine AS build
+# STAGE 1: Build
+# Use 'slim' (Debian) instead of 'alpine'.
+# Alpine often fails when building Angular via QEMU (ARM64 emulation).
+FROM node:20-slim AS build
+
 WORKDIR /app
 
-# Install dependencies
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm ci
 
-# Copy source and build
+# Copy the rest of the source code
 COPY . .
-# Replace 'production' with your specific configuration if needed
-RUN npm run build --configuration=production
 
-# STAGE 2: Serve with Nginx
+# Increase memory limit to prevent crashes during heavy builds
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Run the build
+# We use '--' to ensure arguments are passed correctly to ng build
+RUN npm run build -- --configuration=production
+
+# STAGE 2: Serve
 FROM nginx:alpine
 
-# Remove default nginx static assets
+# Remove default nginx website
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy the build output.
-# IMPORTANT: Check your angular.json 'outputPath'.
-# In Angular 17+, it is often dist/project-name/browser
-COPY --from=build /app/dist/YOUR_PROJECT_NAME/browser /usr/share/nginx/html
+# Copy the build output
+# 1. We use 'angularfrontend' because that is the name in your angular.json
+# 2. We use '/browser' because you are using the new "@angular/build:application" builder
+COPY --from=build /app/dist/angularfrontend/browser /usr/share/nginx/html
 
-# Copy our custom nginx config
+# Copy your custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
