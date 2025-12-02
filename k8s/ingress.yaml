@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: main-ingress
+  annotations:
+    # Use Nginx class
+    kubernetes.io/ingress.class: nginx
+
+    # REWRITE RULE: This is important!
+    # If user goes to /api/users, we strip "/api" and send "/users" to the backend.
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+    # Enable sticky sessions if needed (optional)
+    # nginx.ingress.kubernetes.io/affinity: "cookie"
+spec:
+  rules:
+    - http:
+        paths:
+          # RULE 1: Send /api/* to the Backend Service
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: testapp-service
+                port:
+                  number: 80
+
+          # RULE 2: Send everything else to Frontend
+          - path: /()(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: testapp-frontend-service
+                port:
+                  number: 80

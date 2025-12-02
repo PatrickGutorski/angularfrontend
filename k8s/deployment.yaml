@@ -24,8 +24,7 @@ kind: Service
 metadata:
   name: testapp-frontend-service
 spec:
-  # This provides the Public IP (LoadBalancer)
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: testapp-frontend
   ports:

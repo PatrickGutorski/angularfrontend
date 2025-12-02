@@ -6,9 +6,14 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Add meta tag for API URL (for runtime environment override) -->
+  <meta name="api-url" content="">
 </head>
 <body>
   <app-root></app-root>
+
+  <!-- Load runtime env (optional override) -->
+  <script src="/env.js"></script>
 
   <!-- Greeting button and result (added) -->
   <div id="greeting-widget" style="position:fixed; right:16px; bottom:16px; background:rgba(255,255,255,0.95); padding:12px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; z-index:9999;">
@@ -19,7 +24,34 @@
   <script>
     // Sends GET to the provided API and displays the result inside #greetResult
     (function () {
-      const url = 'http://57.153.167.65/api/greeting';
+      // Build API base from runtime environment if available.
+      // Priority:
+      // 1) window.__env.apiUrl (if you include a runtime env script)
+      // 2) <meta name="api-url" content="..."> tag in the document head
+      // 3) fallback to the original IP
+      function getApiBase() {
+        try {
+          if (window && window.__env && window.__env.apiUrl) {
+            return window.__env.apiUrl;
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        var meta = document.querySelector('meta[name="api-url"]');
+        if (meta && meta.getAttribute('content')) {
+          return meta.getAttribute('content');
+        }
+
+        // Final fallback: original API host (keeps previous behavior)
+        return 'http://57.153.167.65';
+      }
+
+      var apiBase = getApiBase();
+      // Trim any trailing slash
+      apiBase = apiBase.replace(/\/$/, '');
+      var url = apiBase + '/api/greeting';
+
       const btn = document.getElementById('greetBtn');
       const out = document.getElementById('greetResult');
 
