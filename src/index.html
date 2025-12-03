@@ -6,8 +6,7 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <!-- Add meta tag for API URL (for runtime environment override) -->
-  <meta name="api-url" content="">
+  <meta name="api-url" content="/api">
 </head>
 <body>
   <app-root></app-root>
@@ -44,7 +43,7 @@
         }
 
         // Final fallback: original API host (keeps previous behavior)
-        return 'http://fallback';
+        return '/api';
       }
 
       var apiBase = getApiBase();
