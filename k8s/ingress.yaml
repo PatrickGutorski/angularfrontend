@@ -6,10 +6,8 @@ metadata:
     # 1. Tell Kubernetes to use the Azure Gateway
     kubernetes.io/ingress.class: azure/application-gateway
 
-    # 2. Rewrite Logic:
-    # This strips the path prefix from the URL before sending it to the backend.
-    # So "/api/users" becomes "/users" when it hits your Java app.
-    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/api/"
+    appgw.ingress.kubernetes.io/health-probe-status-codes: "200-404"
 spec:
   rules:
     - http:
