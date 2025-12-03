@@ -20,7 +20,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: testapp-service
+                name: testapp-backend-service
                 port:
                   number: 80
 
