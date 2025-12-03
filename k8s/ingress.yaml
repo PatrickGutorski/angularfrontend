@@ -7,7 +7,12 @@ metadata:
     kubernetes.io/ingress.class: azure/application-gateway
 
     appgw.ingress.kubernetes.io/backend-path-prefix: "/api/"
-    appgw.ingress.kubernetes.io/health-probe-status-codes: "200-404"
+
+    # Fixes 404 errors for health probes on some setups
+    # appgw.ingress.kubernetes.io/health-probe-status-codes: "200-404"
+
+    # Use the real health endpoint and make sure it used /api/ prefix
+    appgw.ingress.kubernetes.io/health-probe-path: "/api/actuator/health"
 spec:
   rules:
     - http:
