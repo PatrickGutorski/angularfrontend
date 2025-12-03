@@ -3,30 +3,29 @@ kind: Ingress
 metadata:
   name: main-ingress
   annotations:
-    # Use Nginx class
-    kubernetes.io/ingress.class: nginx
+    # 1. Tell Kubernetes to use the Azure Gateway
+    kubernetes.io/ingress.class: azure/application-gateway
 
-    # REWRITE RULE: This is important!
-    # If user goes to /api/users, we strip "/api" and send "/users" to the backend.
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-
-    # Enable sticky sessions if needed (optional)
-    # nginx.ingress.kubernetes.io/affinity: "cookie"
+    # 2. Rewrite Logic:
+    # This strips the path prefix from the URL before sending it to the backend.
+    # So "/api/users" becomes "/users" when it hits your Java app.
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
 spec:
   rules:
     - http:
         paths:
-          # RULE 1: Send /api/* to the Backend Service
-          - path: /api(/|$)(.*)
+          # RULE 1: API Traffic -> Backend
+          # Note: Ensure 'name' matches your actual running service (kubectl get services)
+          - path: /api/*
             pathType: ImplementationSpecific
             backend:
               service:
-                name: testapp-backend-service
+                name: testapp-service
                 port:
                   number: 80
 
-          # RULE 2: Send everything else to Frontend
-          - path: /()(.*)
+          # RULE 2: All other traffic -> Frontend
+          - path: /*
             pathType: ImplementationSpecific
             backend:
               service:
