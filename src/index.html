@@ -44,13 +44,13 @@
         }
 
         // Final fallback: original API host (keeps previous behavior)
-        return 'http://57.153.167.65';
+        return 'http://fallback';
       }
 
       var apiBase = getApiBase();
       // Trim any trailing slash
       apiBase = apiBase.replace(/\/$/, '');
-      var url = apiBase + '/api/greeting';
+      var url = apiBase + '/greeting';
 
       const btn = document.getElementById('greetBtn');
       const out = document.getElementById('greetResult');
