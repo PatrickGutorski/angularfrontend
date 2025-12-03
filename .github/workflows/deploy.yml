@@ -24,10 +24,6 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Required for ARM64 builds
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -39,13 +35,13 @@ jobs:
       - name: Login to ACR
         run: az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
 
-      # Build for ARM64
+      # Build for AMD64
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          platforms: linux/arm64
+          platforms: linux/amd64
           tags: |
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
